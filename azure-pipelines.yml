@@ -1,33 +1,17 @@
 
-jobs:
-- job: BuildAndDeploy
-  steps:
-    # Step to create the App Service Plan and Web App
-    - script:
-        az login --service-principal -u $(azureServicePrincipalId) -p $(azureServicePrincipalPassword) --tenant $(azureTenantId)
-        az account set --subscription $(azureSubscriptionId)
-        az group create --name myResourceGroup --location eastus
-        az appservice plan create --name myAppServicePlan --resource-group myResourceGroup --sku B1 --is-linux
-        az webapp create --resource-group myResourceGroup --plan myAppServicePlan --name gab-webapp --runtime "NODE|14-lts"
-      displayName: 'Create Azure Resources'
-      
-    # Step to build the .NET application
-    - script: dotnet build --configuration $(buildConfiguration)
-      displayName: 'dotnet build $(buildConfiguration)'
+variables:
+  buildConfiguration: 'Release'
 
-    # Step to publish the .NET application
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: 'publish'
-        publishWebProjects: true
-        zipAfterPublish: true
-        outputPath: '$(Build.ArtifactStagingDirectory)'
-
-    # Step to deploy the application to Azure Web App
-    - task: AzureWebApp@1
-      inputs:
-        azureSubscription: 'onlinedotnetcalculator'
-        appType: 'webAppLinux'
-        appName: 'gab-webapp'
-        package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
-      displayName: 'Deploy to Azure Web App'
+steps:
+- script: dotnet build --configuration $(buildConfiguration)
+  displayName: 'dotnet build $(buildConfiguration)'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: 'onlinedotnetcalculator'
+    appType: 'webAppLinux'
+    appName: 'gab-webapp'
+    package: '$(System.DefaultWorkingDirectory)/**/*.zip'
